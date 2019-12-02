@@ -19,12 +19,12 @@ public class CBCXposedHook implements IXposedHookLoadPackage {
             return;
         }
 
-        if ("com.chinamworld.main".equals(lpParam.packageName)) {
+        if ("com.chinamworld.main".equals(lpParam.packageName) || "com.ccb.loongpay".equals(lpParam.packageName)) {
             getClassLoader(lpParam);
         }
     }
 
-    private void getClassLoader(XC_LoadPackage.LoadPackageParam lpParam) {
+    private void getClassLoader(final XC_LoadPackage.LoadPackageParam lpParam) {
         try {
             String className = "com.secneo.apkwrapper.ApplicationWrapper";
             Class clazz = lpParam.classLoader.loadClass(className);
@@ -36,7 +36,11 @@ public class CBCXposedHook implements IXposedHookLoadPackage {
                                 super.afterHookedMethod(param);
                                 Context context = (Context) param.args[0];
                                 ClassLoader classLoader = context.getClassLoader();
-                                hookMainActivity(classLoader);
+                                if ("com.chinamworld.main".equals(lpParam.packageName)) {
+                                    hookMainActivity(classLoader);
+                                } else {
+                                    hookLoongpayMainActivity(classLoader);
+                                }
                             }
                         });
             } else {
@@ -63,6 +67,25 @@ public class CBCXposedHook implements IXposedHookLoadPackage {
             }
         } catch (Throwable e) {
             LogUtil.e(TAG, "hookMainActivity err:" + Log.getStackTraceString(e));
+        }
+    }
+
+    private void hookLoongpayMainActivity(ClassLoader classLoader) {
+        try {
+            String className = "start.MainActivity";
+            Class loadClass = classLoader.loadClass(className);
+            if (loadClass != null) {
+                XposedHelpers.findAndHookMethod(loadClass, "checkSafeEnvironment", new XC_MethodReplacement() {
+                    @Override
+                    protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                        return true;
+                    }
+                });
+            } else {
+                LogUtil.e(TAG, "not found class : " + className);
+            }
+        } catch (Throwable e) {
+            LogUtil.e(TAG, "hookLoongpayMainActivity err:" + Log.getStackTraceString(e));
         }
     }
 }
